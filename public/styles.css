@@ -1,0 +1,577 @@
+:root {
+  color-scheme: light;
+  --surface-1:      #fcfcfb;
+  --page-plane:     #f9f9f7;
+  --text-primary:   #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted:     #898781;
+  --gridline:       #e1e0d9;
+  --baseline:       #c3c2b7;
+  --border:         rgba(11,11,11,0.10);
+  --delta-good:     #006300;
+  --delta-bad:      #d03b3b;
+  --status-good:    #0ca30c;
+  --status-critical:#d03b3b;
+  --series-1:       #2a78d6; /* 플레이어1 - blue */
+  --series-2:       #eb6834; /* 플레이어2 - orange */
+  --series-3:       #1baf7a; /* 플레이어3 - aqua */
+  --input-bg:       #fffbe6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --delta-good:     #0ca30c;
+    --delta-bad:      #e66767;
+    --status-good:    #0ca30c;
+    --status-critical:#d03b3b;
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-3:       #199e70;
+    --input-bg:       #2a2a1e;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-1:      #1a1a19;
+  --page-plane:     #0d0d0d;
+  --text-primary:   #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted:     #898781;
+  --gridline:       #2c2c2a;
+  --baseline:       #383835;
+  --border:         rgba(255,255,255,0.10);
+  --delta-good:     #0ca30c;
+  --delta-bad:      #e66767;
+  --status-good:    #0ca30c;
+  --status-critical:#d03b3b;
+  --series-1:       #3987e5;
+  --series-2:       #d95926;
+  --series-3:       #199e70;
+  --input-bg:       #2a2a1e;
+}
+ * { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--page-plane);
+  color: var(--text-primary);
+  padding: 24px;
+}
+.app { max-width: 1180px; margin: 0 auto; }
+ header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+header h1 { font-size: 22px; margin: 0 0 4px; }
+header p.note { font-size: 12.5px; color: var(--text-secondary); margin: 0; max-width: 640px; line-height: 1.5; }
+.theme-toggle {
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+ .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.last-saved { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
+ .toast {
+  position: fixed; bottom: 22px; right: 22px; z-index: 60;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 16px; font-size: 13px; color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  opacity: 0; transform: translateY(8px); transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none; max-width: min(320px, 80vw);
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.ok { border-color: color-mix(in srgb, var(--status-good) 45%, transparent); color: var(--delta-good); font-weight: 600; }
+.toast.bad { border-color: color-mix(in srgb, var(--status-critical) 45%, transparent); color: var(--delta-bad); font-weight: 600; }
+@media (max-width: 640px) {
+  .toast { left: 12px; right: 12px; bottom: 12px; max-width: none; }
+}
+ .more-menu-wrap { position: relative; }
+.more-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; min-width: 140px;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.16); overflow: hidden; z-index: 40;
+}
+.more-menu-item {
+  display: block; width: 100%; text-align: left; border: none; background: transparent;
+  color: var(--text-primary); padding: 9px 14px; font-size: 13px; cursor: pointer;
+}
+.more-menu-item:hover { background: var(--gridline); }
+ /* DB연결 팝업 */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 50;
+}
+.modal {
+  display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: min(480px, 92vw); max-height: 85vh; overflow: auto;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px 20px 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.3); z-index: 51;
+}
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.modal-head h3 { margin: 0; font-size: 16px; }
+.modal-close { border: none; background: transparent; color: var(--text-muted); font-size: 16px; cursor: pointer; padding: 4px; }
+.modal-close:hover { color: var(--text-primary); }
+.modal-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.modal.modal-narrow { width: min(320px, 90vw); }
+.db-backup-picker { margin-top: 10px; }
+.db-backup-picker select {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--input-bg); color: var(--text-primary); font-size: 13px;
+}
+ .card-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+.card-panel h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.note-inline { font-size: 12.5px; color: var(--text-secondary); margin: -4px 0 14px; line-height: 1.5; }
+.section-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 12px;
+}
+.section-head h2 { margin: 0; }
+.section-head .btn { flex: none; }
+ .players-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+.player-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--page-plane);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 10px 6px 8px;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+/* 이름을 바로 클릭해서 고치는 대신, ✏️ 버튼을 눌러야 편집 모드로 들어간다 — 평소엔 밑줄 없는
+   일반 텍스트로 보이고, 편집 중일 때만 입력칸이 나타난다(밑줄 없이, 포커스 배경만 살짝). */
+.player-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.player-edit-btn {
+  border: none; background: transparent; cursor: pointer; font-size: 12px;
+  line-height: 1; padding: 2px 2px; opacity: .6; border-radius: 4px;
+}
+.player-edit-btn:hover { opacity: 1; background: var(--gridline); }
+.player-chip input {
+  border: none; background: transparent; color: var(--text-primary);
+  font-size: 13px; font-weight: 600; width: 84px; outline: none; padding: 2px 4px;
+  border-radius: 4px;
+}
+.player-chip input:focus { background: var(--gridline); }
+ .tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+.tab-btn {
+  border: none; background: transparent; color: var(--text-secondary);
+  padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--series-1); border-bottom-color: var(--series-1); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+ .toolbar { display: flex; gap: 8px; margin: 10px 0 14px; flex-wrap: wrap; align-items: center; }
+button.btn {
+  border: 1px solid var(--border);
+  background: var(--page-plane);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button.btn:hover { background: var(--gridline); }
+button.btn.primary { background: var(--series-1); color: #fff; border-color: transparent; }
+button.btn.danger { color: var(--delta-bad); border-color: color-mix(in srgb, var(--delta-bad) 45%, transparent); }
+button.btn.danger:hover { background: color-mix(in srgb, var(--delta-bad) 14%, transparent); }
+ table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+thead tr.group th { background: var(--gridline); color: var(--text-primary); font-weight: 700; text-align: center; padding: 6px 4px; border: 1px solid var(--border); }
+thead tr.sub th { background: var(--gridline); color: var(--text-secondary); font-weight: 600; text-align: center; padding: 6px 4px; border: 1px solid var(--border); font-size: 12px; }
+tbody td { border: 1px solid var(--border); padding: 3px 2px; text-align: center; white-space: nowrap; }
+tbody tr.example { background: color-mix(in srgb, var(--series-1) 6%, transparent); }
+tbody tr.flash { animation: flashRow 1.8s ease; }
+@keyframes flashRow {
+  0%   { background: color-mix(in srgb, var(--status-good) 35%, transparent); }
+  100% { background: transparent; }
+}
+td input[type="date"], td input[type="number"], td input[type="text"] {
+  width: 100%; border: none; background: transparent; color: var(--text-primary);
+  font-size: 13px; text-align: center; outline: none; padding: 4px 1px;
+  font-variant-numeric: tabular-nums;
+}
+td input:focus { background: var(--gridline); }
+/* 게임 기록의 날짜: 직접 타이핑은 막아뒀으니 밑줄 점선(=수정 가능 표시) 대신 또렷한 굵은
+   글자로 바꾸고, 클릭하면 달력이 열린다는 걸 알 수 있게 커서를 포인터로 바꾼다. */
+td input.date-calendar-only, .daily-card-date input.date-calendar-only {
+  border: none; border-bottom: none; background: transparent; outline: none;
+  font-weight: 700; font-size: 14px; cursor: pointer; color: var(--text-primary);
+}
+td input.date-calendar-only:focus, .daily-card-date input.date-calendar-only:focus {
+  background: var(--gridline); border-bottom: none;
+}
+/* 날짜칸: 브라우저가 로케일에 맞춰 "2026 . 08 . 12 ."처럼 공백을 넣어 렌더링하는 걸 막을
+   방법이 없어서, 네이티브 입력의 글자는 투명하게 감추고(달력 아이콘/클릭 동작은 그대로 유지)
+   원하는 형식("2026.08.12")의 글자를 그 위에 겹쳐 보여준다. */
+.date-display-cell, .daily-card-date { position: relative; }
+.date-display-cell input.date-calendar-only, .daily-card-date input.date-calendar-only {
+  color: transparent; caret-color: transparent;
+}
+.date-display-cell .date-display-label, .daily-card-date .date-display-label {
+  position: absolute; top: 0; left: 0; right: 20px; bottom: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; font-weight: 700; font-size: 14px; color: var(--text-primary);
+}
+td.pl-pos, .pl-pos { color: var(--delta-good); font-weight: 600; }
+td.pl-neg, .pl-neg { color: var(--delta-bad); font-weight: 600; }
+td.pl-zero, .pl-zero { color: var(--text-muted); }
+td.valid-bad { background: color-mix(in srgb, var(--status-critical) 16%, transparent) !important; color: var(--delta-bad); font-weight: 700; }
+td.valid-ok { background: color-mix(in srgb, var(--status-good) 14%, transparent) !important; color: var(--delta-good); font-weight: 700; }
+/* 메모 칸은 rowSpan=3이라 세로로 넓은데 입력칸 자체는 원래 한 줄 높이뿐이라 위쪽에 작게
+   떠 있는 것처럼 보였다 — 표 칸에서는 height:100%가 잘 안 먹어서, 칸을 기준점(relative)으로
+   두고 입력칸을 top/bottom을 다 지정해 절대배치로 늘려서 셀 높이만큼 꽉 차게 만든다. */
+td.col-note { padding: 0; position: relative; }
+td.col-note input {
+  position: absolute; top: 3px; right: 3px; bottom: 3px; left: 3px;
+  width: auto; height: auto; text-align: left;
+}
+.row-del { border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 14px; }
+.row-del:hover { color: var(--delta-bad); }
+ /* 게임 기록: 세션(날짜) 하나를 플레이어 3줄로 세로로 쌓아서 보여준다 — 옆으로 9개 숫자 열이
+   늘어서던 이전 구조 대신, 한 줄에는 한 플레이어의 빌린칩/최종칩/손익만 있어서 좁은 화면에서도
+   각 칸이 훨씬 넓고 읽기 쉬워진다. 날짜/요일/검증/메모/삭제는 세션당 한 번만, rowspan=3으로. */
+.col-date, .col-weekday { background: color-mix(in srgb, var(--text-muted) 9%, var(--surface-1)); }
+thead th.col-date, thead th.col-weekday, thead th.col-verify { background: color-mix(in srgb, var(--text-muted) 22%, var(--gridline)); }
+ tr.prow-0 td.col-player, tr.prow-0 td.col-buy, tr.prow-0 td.col-final { background: color-mix(in srgb, var(--series-1) 9%, var(--surface-1)); }
+tr.prow-1 td.col-player, tr.prow-1 td.col-buy, tr.prow-1 td.col-final { background: color-mix(in srgb, var(--series-2) 9%, var(--surface-1)); }
+tr.prow-2 td.col-player, tr.prow-2 td.col-buy, tr.prow-2 td.col-final { background: color-mix(in srgb, var(--series-3) 9%, var(--surface-1)); }
+/* strong left-edge color bar on the 플레이어 cell of each row — the divider between players */
+tr.prow-0 td.col-player { border-left: 4px solid var(--series-1); }
+tr.prow-1 td.col-player { border-left: 4px solid var(--series-2); }
+tr.prow-2 td.col-player { border-left: 4px solid var(--series-3); }
+td.col-player { text-align: left; padding-left: 8px; font-weight: 600; }
+td.col-player .dot { margin-right: 6px; }
+/* thicker top border where one session's 3-row block ends and the next begins */
+tr.session-start td { border-top: 2px solid var(--baseline); }
+td.col-verify { border-left: 2px solid var(--border); }
+ /* scrollable game-record table once it grows past ~15 rows, with a sticky header + sticky date column for mobile.
+   IMPORTANT: the table must NOT be squeezed to the wrapper's width — that's what made every
+   column illegible on narrow phones (numbers rendered as "..."). Instead the table keeps its
+   natural (readable) column widths and the wrapper scrolls horizontally when it doesn't fit. */
+.table-scroll { max-height: 560px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.table-scroll table { border: none; width: max-content; min-width: 100%; }
+.table-scroll thead th { position: sticky; top: 0; z-index: 2; }
+.table-scroll thead th.col-date { left: 0; z-index: 3; }
+.table-scroll tbody td.col-date { position: sticky; left: 0; z-index: 1; }
+ /* table-layout:auto는 <input>이 들어있는 칸을 (CSS width:100%와 무관하게) 브라우저 기본
+   인풋 크기(~180px)만큼 넓게 잡아버려서 min-width를 아무리 줄여도 표가 넓어졌었다.
+   table-layout:fixed로 바꿔서 칼럼 폭을 우리가 정하는데, 폭을 px로 고정하면 표가
+   넓어질 때 남는 공간이 칼럼마다 제각각(대부분 메모 칸)으로 몰려서 다른 칸(특히 날짜)은
+   그대로 좁게 남아 내용이 잘렸다. 그래서 칼럼 폭을 "비율(%)"로 주고 표 자체는
+   width:100%로 — 넓어지면 모든 칸이 같은 비율로 함께 넓어지고, table의 min-width보다
+   좁아져야 하면 .table-scroll이 가로 스크롤을 넘겨받는다. */
+#dailyTable { table-layout: fixed; width: 100%; min-width: 640px; }
+ /* same "don't squeeze the table" fix for the other two scrollable tables (합계장표 누적표, 현금계좌) */
+.table-scroll-x { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+.table-scroll-x table { width: max-content; min-width: 100%; border: none; }
+ /* 게임 기록 칸 너비(비율) — 아래 %는 위 min-width(640px) 기준으로 각 칸이 실제 내용이
+   잘리지 않는 최소 폭을 갖도록 맞춘 값. 표가 넓어지면 이 비율 그대로 다같이 커진다.
+   날짜는 달력 아이콘 + "2026. 08. 12." 형식이 다 보이려면 최소 130px 안팎이 필요해서
+   비중을 가장 크게 뒀다. */
+#dailyTable th.col-date, #dailyTable td.col-date { width: 20.5%; }
+#dailyTable th.col-weekday, #dailyTable td.col-weekday { width: 4.8%; }
+#dailyTable th.col-player, #dailyTable td.col-player { width: 11.8%; }
+#dailyTable th.col-buy, #dailyTable td.col-buy { width: 9%; }
+#dailyTable th.col-final, #dailyTable td.col-final { width: 9%; }
+#dailyTable th.col-pl, #dailyTable td.col-pl { width: 9.5%; }
+#dailyTable th.col-verify, #dailyTable td.col-verify { width: 10.5%; white-space: normal; }
+#dailyTable th.col-del, #dailyTable td.col-del { width: 4.2%; padding: 3px 0; }
+#dailyTable td.col-note { width: 20.7%; } /* 메모는 input이라 줄바꿈이 안 먹어서 너무 좁히지 않는다 */
+ /* cash-transaction marker rows interleaved into 게임 기록 — warm/amber tint so they read as
+   visibly distinct from the player win/loss rows, not just a faint tint. */
+tr.cash-marker { background: color-mix(in srgb, #f0b429 22%, var(--surface-1)); font-style: italic; }
+tr.cash-marker td { white-space: normal; }
+tr.cash-marker td.cash-marker-info { border-left: 3px solid #f0b429; }
+td.cash-marker-info { text-align: left; padding-left: 10px !important; font-style: normal; }
+ /* 게임 기록: 좁은 화면(모바일)에서는 표 대신 세션 하나당 카드 1개로 세로로 쌓아서 보여준다 —
+   표는 칸이 9개라 아무리 줄여도 가로 스크롤 없이는 다 보이지 않는데, 카드는 옆으로 늘어선
+   숫자 대신 위아래로 필요한 만큼 쌓이기만 하면 되니 가로 스크롤이 생기지 않는다.
+   기본(넓은 화면)에서는 기존 표를 그대로 쓰고, 아래 미디어쿼리에서 서로 노출을 바꾼다. */
+.daily-cards { display: none; }
+.daily-card {
+  border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden;
+  background: var(--surface-1);
+}
+.daily-card.flash { animation: flashRow 1.8s ease; }
+.daily-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; background: color-mix(in srgb, var(--text-muted) 12%, var(--gridline));
+}
+.daily-card-date { display: flex; align-items: center; gap: 8px; position: relative; }
+.daily-card-date input.date-calendar-only { width: 118px; text-align: left; padding: 4px 2px; }
+.daily-card-date .date-display-label { justify-content: flex-start; left: 2px; right: 40px; }
+.daily-card-weekday { font-size: 12.5px; color: var(--text-secondary); }
+.daily-card-player {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+/* nth-of-type로는 안 된다 — 카드 안에 head/foot div도 같은 <div>라서 순서가 하나씩 밀린다
+   (플레이어1이 실제로는 카드 안에서 2번째 div라 nth-of-type(2)가 적용돼버림). 그래서
+   렌더링할 때 각 줄에 직접 붙이는 prow-0/1/2 클래스로 고른다. */
+.daily-card-player.prow-0 { border-left: 4px solid var(--series-1); background: color-mix(in srgb, var(--series-1) 7%, var(--surface-1)); }
+.daily-card-player.prow-1 { border-left: 4px solid var(--series-2); background: color-mix(in srgb, var(--series-2) 7%, var(--surface-1)); }
+.daily-card-player.prow-2 { border-left: 4px solid var(--series-3); background: color-mix(in srgb, var(--series-3) 7%, var(--surface-1)); }
+.daily-card-player-name { flex: none; width: 64px; font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.daily-card-player-name .dot { margin-right: 4px; }
+.daily-card-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.daily-card-field span { font-size: 10.5px; color: var(--text-muted); }
+.daily-card-field input {
+  width: 100%; border: none; background: transparent; color: var(--text-primary);
+  font-size: 13px; text-align: left; outline: none; padding: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+.daily-card-field input:focus { background: var(--gridline); }
+.daily-card-pl { flex: none; width: 62px; text-align: right; font-weight: 600; font-size: 13px; }
+.daily-card-foot {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border);
+}
+.daily-card-foot .col-verify { flex: none; font-size: 12px; padding: 3px 8px; border-radius: 6px; border-left: none; }
+.daily-card-foot input.note {
+  flex: 1; min-width: 0; border: none; background: transparent; color: var(--text-primary);
+  font-size: 13px; outline: none; padding: 4px 2px;
+}
+.daily-card-foot input.note:focus { background: var(--gridline); }
+.daily-card .row-del { flex: none; }
+.daily-card.cash-marker-card { background: color-mix(in srgb, #f0b429 18%, var(--surface-1)); }
+.daily-card.cash-marker-card .daily-card-head { background: color-mix(in srgb, #f0b429 30%, var(--gridline)); font-style: italic; }
+.daily-card-cash-body { padding: 8px 10px; font-size: 13px; }
+ @media (max-width: 760px) {
+  #tab-ledger .table-scroll { display: none; }
+  #tab-ledger .daily-cards { display: block; }
+  /* 현금 계좌 표도 같은 이유(가로스크롤 없이 좁은 화면에서 보고 편집)로 카드형으로 바꾼다 —
+     (최종 합계장표의) 누적표는 그대로 두고, 현금 계좌 표만 골라서 숨긴다. */
+  .cash-table-scroll { display: none; }
+}
+ /* 현금 계좌 카드 뷰 — 게임 기록 카드와 같은 .daily-card 틀을 그대로 쓰고, 안쪽 내용만
+   구분/플레이어 선택 + 금액/반영액/메모로 바꿔 끼운다. */
+.cash-entry-body { padding: 10px 10px 4px; display: flex; flex-direction: column; gap: 8px; }
+.cash-entry-row { display: flex; gap: 8px; align-items: center; }
+.cash-entry-row select {
+  flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface-1); color: var(--text-primary); font-size: 13px; padding: 6px 4px;
+}
+.cash-entry-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cash-entry-field span { font-size: 10.5px; color: var(--text-muted); }
+.cash-entry-field input {
+  width: 100%; border: none; background: transparent;
+  color: var(--text-primary); font-size: 13px; outline: none; padding: 4px 2px;
+  font-variant-numeric: tabular-nums;
+}
+.cash-entry-field input:focus { background: var(--gridline); }
+.cash-entry-signed { flex: none; text-align: right; font-weight: 600; font-size: 14px; min-width: 78px; }
+.cash-entry-signed .sub-label { display: block; font-size: 10.5px; color: var(--text-muted); font-weight: 400; }
+.cash-entry-body input.note {
+  width: 100%; border: none; border-top: 1px solid var(--border); background: transparent;
+  color: var(--text-primary); font-size: 13px; outline: none; padding: 8px 2px 2px;
+}
+.cash-entry-body input.note:focus { background: var(--gridline); }
+ /* mode toggle for 최종 합계장표 (칩 기준 / 현금 정산 포함) */
+.mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.mode-toggle button {
+  border: 1px solid var(--border); background: var(--page-plane); color: var(--text-secondary);
+  border-radius: 20px; padding: 6px 14px; font-size: 12.5px; cursor: pointer;
+}
+.mode-toggle button.active { background: var(--series-1); color: #fff; border-color: transparent; }
+.mode-hint { font-size: 11.5px; color: var(--text-muted); margin: -4px 0 14px; }
+ /* "전체 검증" is a data-integrity check, not a per-player stat — give it its own
+   pill-shaped banner (distinct from .stat-tile) so it doesn't read as a 4th card.
+   Only shown in 칩 기준 mode: 현금 정산 포함 모드에서는 칩+현금 혼합값이라 검증 의미가 없음. */
+.chip-validation {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 1.5px solid transparent;
+}
+.chip-validation.show { display: flex; }
+.chip-validation .cv-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%; font-size: 13px; flex: none;
+}
+.chip-validation.status-good { background: color-mix(in srgb, var(--status-good) 12%, transparent); border-color: color-mix(in srgb, var(--status-good) 40%, transparent); color: var(--delta-good); }
+.chip-validation.status-good .cv-icon { background: var(--status-good); color: #fff; }
+.chip-validation.status-critical { background: color-mix(in srgb, var(--status-critical) 14%, transparent); border-color: color-mix(in srgb, var(--status-critical) 45%, transparent); color: var(--delta-bad); }
+.chip-validation.status-critical .cv-icon { background: var(--status-critical); color: #fff; }
+.chip-validation .cv-sub { font-weight: 500; font-size: 12px; opacity: .85; }
+ .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-tile {
+  background: var(--page-plane);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.stat-tile .label { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.stat-tile .value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-tile.status-good .value, .stat-tile.status-good .icon { color: var(--status-good); }
+.stat-tile.status-critical .value, .stat-tile.status-critical .icon { color: var(--status-critical); }
+.stat-tile .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+ .legend { display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
+ /* 예전에는 SVG 너비를 CSS로만 줄이고 viewBox는 1000 고정이라, preserveAspectRatio="none"
+   때문에 가로/세로 배율이 달라져서 안의 글자(축 라벨 등)까지 눌린 것처럼 찌그러져 보였다 —
+   그래서 최소 너비를 두고 그 아래로는 가로 스크롤로 넘겼었는데, 이제는 renderChart()가
+   매번 실제 컨테이너 너비를 재서 viewBox를 그 값 그대로 씌우기 때문에(1 viewBox 단위 = 실제 1px)
+   배율이 항상 1:1이라 글자가 절대 찌그러지지 않는다 — 그래서 가로 스크롤도 필요 없어졌다. */
+.chart-wrap { position: relative; margin-bottom: 22px; }
+svg#chart { width: 100%; height: 300px; display: block; overflow: visible; }
+.gridline { stroke: var(--gridline); stroke-width: 1; }
+.baseline { stroke: var(--baseline); stroke-width: 1; stroke-dasharray: 4 3; }
+.axis-label { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.series-line { fill: none; stroke-width: 2; }
+.series-dot { r: 4; }
+.end-dot { r: 4.5; stroke: var(--surface-1); stroke-width: 2; }
+.end-label { font-size: 12px; fill: var(--text-secondary); font-weight: 600; font-variant-numeric: tabular-nums; }
+.crosshair { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; }
+.hover-dot { opacity: 0; }
+ #tooltip {
+  position: absolute; pointer-events: none; opacity: 0;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; color: var(--text-primary);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12); transition: opacity .1s;
+  white-space: nowrap; z-index: 5;
+}
+#tooltip .t-date { color: var(--text-muted); margin-bottom: 4px; font-size: 11px; }
+#tooltip .t-row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+#tooltip .t-dot { width: 8px; height: 8px; border-radius: 50%; }
+ .table-view-note { font-size: 11.5px; color: var(--text-muted); margin: -4px 0 10px; }
+footer { font-size: 11.5px; color: var(--text-muted); text-align: center; margin-top: 12px; }
+ /* entry form */
+.entry-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 14px; max-width: 220px; }
+.entry-field.wide { max-width: 460px; }
+.entry-field input {
+  padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--input-bg); color: var(--text-primary); font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.entry-date-row { display: flex; align-items: center; gap: 10px; }
+.entry-weekday { font-size: 12.5px; color: var(--text-muted); margin-top: 18px; }
+ .entry-players { margin-bottom: 6px; display: flex; flex-direction: column; gap: 12px; }
+.entry-player-card {
+  border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  background: var(--page-plane);
+}
+.entry-player-card .name { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+/* 이름과 "+ 빌린칩 추가"를 같은 줄, 같은 높이, 오른쪽 끝에 배치 */
+.entry-name-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+/* 안내문구 + 빌린칩 입력칸들을 한 줄에 나란히 (좁아지면 줄바꿈) */
+.entry-buyin-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+.entry-buyin-label { font-size: 12px; color: var(--text-secondary); flex: none; }
+.entry-buyin-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.entry-buyin-chip { display: flex; align-items: center; gap: 2px; }
+.entry-buyin-chip input {
+  width: 96px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--input-bg); color: var(--text-primary); font-size: 13px;
+  font-variant-numeric: tabular-nums; text-align: center;
+}
+.entry-buyin-chip .rm { border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 2px 4px; }
+.entry-buyin-chip .rm:hover { color: var(--delta-bad); }
+.entry-buyin-chip .rm:disabled { visibility: hidden; }
+.entry-add-buyin {
+  border: 1px dashed var(--border); background: transparent; color: var(--text-secondary);
+  border-radius: 6px; padding: 6px 10px; font-size: 12.5px; cursor: pointer; flex: none;
+}
+.entry-add-buyin:hover { background: var(--gridline); }
+.entry-buyin-total { font-size: 12px; color: var(--text-muted); margin: 2px 0 10px; }
+.entry-final-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.entry-final-row .flabel { font-size: 12px; color: var(--text-secondary); }
+.entry-final-row input {
+  width: 130px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--input-bg); color: var(--text-primary); font-size: 14px;
+  font-variant-numeric: tabular-nums; text-align: center;
+}
+.entry-pl-badge { margin-left: auto; text-align: center; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+ .entry-validation { font-size: 13px; margin: 10px 0 4px; padding: 10px 12px; border-radius: 8px; background: var(--page-plane); }
+.entry-validation.ok { background: color-mix(in srgb, var(--status-good) 14%, transparent); color: var(--delta-good); font-weight: 600; }
+.entry-validation.bad { background: color-mix(in srgb, var(--status-critical) 16%, transparent); color: var(--delta-bad); font-weight: 600; }
+.entry-error { font-size: 12.5px; color: var(--delta-bad); margin: 4px 0 10px; }
+ td select {
+  width: 100%; border: none; background: transparent; color: var(--text-primary);
+  font-size: 13px; text-align: center; outline: none; padding: 4px 2px;
+}
+.cash-hint { font-size: 11.5px; color: var(--text-muted); margin: -6px 0 12px; line-height: 1.5; }
+ /* ---- mobile ---- */
+@media (max-width: 640px) {
+  body { padding: 12px; }
+  .app { max-width: 100%; }
+  header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .header-actions { align-self: flex-start; }
+  header h1 { font-size: 18px; }
+  .card-panel { padding: 14px 12px; margin-bottom: 14px; }
+  .card-panel h2 { font-size: 14px; }
+  .tab-btn { padding: 9px 12px; font-size: 13px; }
+  .mode-toggle button { padding: 6px 11px; font-size: 12px; }
+  .chip-validation { font-size: 12.5px; padding: 9px 12px; }
+  .summary-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-tile { padding: 11px 12px; }
+  .stat-tile .value { font-size: 18px; }
+  table { font-size: 12px; }
+  thead tr.group th, thead tr.sub th { padding: 5px 3px; font-size: 11px; }
+  tbody td { padding: 3px; }
+  td input[type="date"], td input[type="number"], td input[type="text"], td select {
+    font-size: 12px; padding: 4px 1px;
+  }
+  .table-scroll { max-height: 420px; }
+  .entry-field, .entry-field.wide { max-width: 100%; }
+  .entry-buyin-chip input { width: 78px; font-size: 12.5px; }
+  .entry-final-row input { width: 108px; }
+  .entry-pl-badge { margin-left: 0; width: 100%; text-align: right; }
+}
+@media (max-width: 380px) {
+  .summary-cards { grid-template-columns: 1fr; }
+}
+ /* 저장 · 불러오기 */
+.db-status { font-size: 12.5px; color: var(--text-muted); margin: 6px 0 0; min-height: 16px; line-height: 1.5; }
+.db-status.ok { color: var(--delta-good); font-weight: 600; }
+.db-status.bad { color: var(--delta-bad); font-weight: 600; }
+.db-status.loading { color: var(--text-secondary); }
+
+/* 로그인 / 로딩 / 동기화 배너 */
+body.booting .app { display: none; }
+.boot-overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: var(--page-plane); padding: 16px; }
+.boot-overlay.over-app { background: rgba(0,0,0,0.55); }
+.boot-card { width: min(360px, 100%); background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 22px 22px 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); }
+.boot-card h1 { margin: 0 0 10px; font-size: 20px; }
+.boot-card .entry-field { margin-top: 10px; max-width: 100%; }
+.boot-card .entry-field input { width: 100%; }
+.boot-btn { width: 100%; margin-top: 14px; padding: 10px 14px; }
+.boot-error { color: var(--delta-bad); font-size: 13px; font-weight: 600; min-height: 18px; margin-top: 8px; line-height: 1.5; }
+.sync-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--status-critical) 45%, transparent); background: color-mix(in srgb, var(--status-critical) 10%, var(--surface-1)); font-size: 13px; line-height: 1.5; }
+.sync-banner-text { flex: 1 1 260px; color: var(--text-primary); }
+.sync-banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.last-saved.saving { color: var(--text-secondary); }
+.last-saved.error { color: var(--delta-bad); font-weight: 600; }

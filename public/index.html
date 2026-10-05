@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>카드게임 장부</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="booting">
+<div class="app">
+  <header>
+    <div>
+      <h1>카드게임 장부</h1>
+    </div>
+    <div class="header-actions">
+      <span class="last-saved" id="lastSavedIndicator">최종 저장: -</span>
+      <div class="more-menu-wrap">
+        <button class="theme-toggle" id="moreMenuBtn">⋯ 더보기</button>
+        <div class="more-menu" id="moreMenu" style="display: none;">
+          <button class="more-menu-item" id="themeToggle">다크모드</button>
+          <button class="more-menu-item" id="openDbModalBtn">저장 · 불러오기</button>
+          <button class="more-menu-item" id="logoutBtn">로그아웃</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="sync-banner" id="syncBanner" role="alert" style="display:none;">
+    <div class="sync-banner-text" id="syncBannerText"></div>
+    <div class="sync-banner-actions">
+      <button class="btn" id="syncReloadBtn">서버 최신 불러오기</button>
+      <button class="btn danger" id="syncOverwriteBtn">내 화면으로 덮어쓰기</button>
+    </div>
+  </div>
+
+  <section class="card-panel">
+    <h2>플레이어</h2>
+    <div class="players-row" id="playersRow"></div>
+  </section>
+
+  <div class="modal-backdrop" id="dbModalBackdrop" style="display: none;"></div>
+  <div class="modal" id="dbModal" role="dialog" aria-label="저장 · 불러오기" style="display: none;">
+    <div class="modal-head">
+      <h3>저장 · 불러오기</h3>
+      <button class="modal-close" id="dbModalClose">✕</button>
+    </div>
+    <p class="note-inline">
+      화면의 수정 내용은 자동으로 구글시트의 <b>최신본</b>에 저장됩니다.
+      아래 <b>저장하기</b>는 지금 상태를 이름을 붙여 <b>백업</b>으로 따로 남겨두는 기능이에요.
+    </p>
+    <p class="db-status" id="dbStatus"></p>
+    <div class="toolbar">
+      <button class="btn" id="dbSaveBtn">저장하기</button>
+      <button class="btn" id="dbLoadBtn">불러오기</button>
+    </div>
+    <div class="db-backup-picker" id="dbBackupPicker" style="display:none;">
+      <label class="entry-field wide">
+        <span>불러올 백업 선택</span>
+        <select id="dbBackupSelect"></select>
+      </label>
+      <div class="toolbar">
+        <button class="btn primary" id="dbLoadSelectedBtn">선택한 백업 불러오기</button>
+        <button class="btn danger" id="dbDeleteBackupBtn">선택한 백업 삭제</button>
+        <button class="btn" id="dbCancelLoadBtn">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="dateModalBackdrop"></div>
+  <div class="modal modal-narrow" id="dateModal" role="dialog" aria-label="날짜 선택">
+    <div class="modal-head">
+      <h3 id="dateModalTitle">날짜 선택</h3>
+      <button class="modal-close" id="dateModalClose">✕</button>
+    </div>
+    <label class="entry-field wide">
+      <span>날짜</span>
+      <input type="date" id="dateModalInput" class="date-calendar-only">
+    </label>
+    <div class="toolbar">
+      <button class="btn primary" id="dateModalConfirm">확인</button>
+      <button class="btn" id="dateModalCancel">취소</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="ledger">합계 장부</button>
+    <button class="tab-btn" data-tab="entry">일일 기록</button>
+  </div>
+
+  <!-- ================= TAB: 일일 기록 (입력) ================= -->
+  <div class="tab-panel" id="tab-entry">
+    <section class="card-panel">
+      <h2>일일 기록 입력</h2>
+      <p class="note-inline">오늘 게임 결과를 입력한 뒤 <b>최종 반영</b>을 누르면 합계 장부에 새 줄로 추가됩니다.</p>
+
+      <div class="entry-date-row">
+        <label class="entry-field">
+          <span>날짜</span>
+          <input type="date" id="entryDate">
+        </label>
+        <span class="entry-weekday" id="entryWeekday">목</span>
+      </div>
+
+      <div class="entry-players" id="entryPlayers"></div>
+
+      <label class="entry-field wide">
+        <span>메모 (선택)</span>
+        <input type="text" id="entryNote" placeholder="예: 2차 게임, 특이사항 등">
+      </label>
+
+      <div class="entry-validation" id="entryValidation">모든 플레이어의 빌린칩·최종칩을 입력하면 검증 결과가 표시됩니다.</div>
+      <div class="entry-error" id="entryError" style="display:none;"></div>
+
+      <div class="toolbar">
+        <button class="btn primary" id="finalizeBtn">✓ 최종 반영</button>
+        <button class="btn" id="resetEntryBtn">초기화</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= TAB: 합계 장부 ================= -->
+  <div class="tab-panel active" id="tab-ledger">
+    <section class="card-panel">
+      <h2>게임 기록</h2>
+      <div class="toolbar">
+        <button class="btn" id="addRowBtn">+ 게임 기록 추가</button>
+      </div>
+      <div class="table-scroll">
+        <table id="dailyTable">
+          <thead>
+            <tr class="sub">
+              <th class="col-date">날짜</th>
+              <th class="col-weekday">요일</th>
+              <th class="col-player">플레이어</th>
+              <th class="col-buy">빌린칩</th>
+              <th class="col-final">최종칩</th>
+              <th class="col-pl">손익</th>
+              <th class="col-verify">검증(합계=0)</th>
+              <th class="col-note">메모</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="dailyBody"></tbody>
+        </table>
+      </div>
+      <div class="daily-cards" id="dailyCards"></div>
+    </section>
+
+    <section class="card-panel">
+      <h2>최종 합계장표</h2>
+      <div class="mode-toggle" id="summaryModeToggle">
+        <button data-mode="combined" class="active">현금 정산 포함</button>
+        <button data-mode="chip">칩 기준</button>
+      </div>
+      <div class="chip-validation status-good" id="chipValidation"></div>
+      <div class="summary-cards" id="summaryCards"></div>
+
+      <div class="legend" id="legend"></div>
+      <div class="chart-wrap">
+        <svg id="chart" viewBox="0 0 393 300" preserveAspectRatio="none"></svg>
+        <div id="tooltip"></div>
+      </div>
+
+      <p class="table-view-note">아래는 차트와 동일한 데이터를 표로 본 것입니다 (일자별 누적 손익, 전일 누적 + 당일 손익, 최신 날짜가 위).</p>
+      <div class="table-scroll-x">
+        <table id="cumTable">
+          <thead><tr id="cumHead"></tr></thead>
+          <tbody id="cumBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card-panel">
+      <div class="section-head">
+        <h2>현금 계좌</h2>
+        <button class="btn" id="addCashBtn">추가</button>
+      </div>
+      <div class="summary-cards" id="cashCards"></div>
+      <div class="table-scroll-x cash-table-scroll">
+        <table id="cashTable">
+          <thead>
+            <tr class="sub">
+              <th>날짜</th><th>구분</th><th>플레이어</th><th>금액</th><th>반영액</th><th>메모</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="cashBody"></tbody>
+        </table>
+      </div>
+      <div class="daily-cards" id="cashCardsList"></div>
+    </section>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="boot-overlay" id="bootOverlay">
+  <form class="boot-card" id="loginPanel" autocomplete="off" style="display:none;">
+    <h1>카드게임 장부</h1>
+    <p class="note-inline">비밀번호를 입력해주세요.</p>
+    <label class="entry-field wide">
+      <span>비밀번호</span>
+      <input type="password" id="loginPassword" autocomplete="current-password">
+    </label>
+    <div class="boot-error" id="loginError" role="alert"></div>
+    <button type="submit" class="btn primary boot-btn" id="loginBtn">로그인</button>
+  </form>
+  <div class="boot-card" id="loadingPanel">
+    <h1>카드게임 장부</h1>
+    <p class="note-inline">구글시트에서 데이터를 불러오는 중…</p>
+  </div>
+  <div class="boot-card" id="errorPanel" style="display:none;">
+    <h1>카드게임 장부</h1>
+    <div class="boot-error" id="bootErrorText"></div>
+    <p class="note-inline">데이터는 건드리지 않았어요. 문제가 해결되면 다시 시도해주세요. (불러오기에 성공하기 전에는 아무것도 저장하지 않습니다.)</p>
+    <button type="button" class="btn primary boot-btn" id="bootRetryBtn">다시 시도</button>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Render Blueprint — 이 저장소를 Render에 연결하면 이 파일대로 웹 서비스가 만들어집니다.
+services:
+  - type: web
+    name: card-game-ledger
+    runtime: node
+    plan: free            # 무료 플랜은 15분 이상 접속이 없으면 잠들고, 첫 접속 때 20~50초 걸립니다. 필요하면 starter로 올리세요.
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SPREADSHEET_ID        # 구글시트 주소의 /d/ 와 /edit 사이 값
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON   # 서비스 계정 키 JSON 파일 내용 전체
+        sync: false
+      - key: APP_PASSWORD          # 로그인에 쓰는 공용 비밀번호
+        sync: false
+      - key: SESSION_SECRET        # 로그인 토큰 서명용 임의의 긴 문자열 (자동 생성)
+        generateValue: true

@@ -1,0 +1,21 @@
+{
+  "name": "card-game-ledger",
+  "version": "2.0.0",
+  "description": "카드게임 칩 장부 웹 앱 (Express + Google Sheets)",
+  "main": "server.js",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "STORE=memory APP_PASSWORD=dev node server.js",
+    "test": "node --test test/*.test.js",
+    "verify-sheet": "node scripts/verify-sheet.js"
+  },
+  "dependencies": {
+    "@googleapis/sheets": "^18.1.0",
+    "express": "^5.2.1",
+    "google-auth-library": "^11.1.0"
+  }
+}
